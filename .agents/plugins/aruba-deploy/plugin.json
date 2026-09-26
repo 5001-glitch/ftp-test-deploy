@@ -1,0 +1,8 @@
+{
+  "name": "aruba-deploy",
+  "version": "1.0.0",
+  "description": "Un plugin per sostituire il workflow di test standard con un deploy su Aruba.",
+  "skills": [
+    "deploy_aruba"
+  ]
+}

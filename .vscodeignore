@@ -1,0 +1,9 @@
+.vscode/**
+.agents/**
+.temp_deploy/**
+OLD/**
+.DS_Store
+*.vsix
+src/**
+tsconfig.json
+package-lock.json
