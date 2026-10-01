@@ -6,11 +6,11 @@ import * as ftp from 'basic-ftp';
 export interface DiffItem {
     localPath: string;
     remotePath: string;
-    type: 'new' | 'modified';
+    type: 'new' | 'modified' | 'deleted';
     name: string;
 }
 
-export async function buildSftpDiff(host: string, port: number, user: string, pass: string, localPath: string, remoteFolder: string, isCancelled: () => boolean = () => false): Promise<DiffItem[]> {
+export async function buildSftpDiff(host: string, port: number, user: string, pass: string, localPath: string, remoteFolder: string, deleteRemoteFiles: boolean, isCancelled: () => boolean = () => false): Promise<DiffItem[]> {
     const sftp = new SftpClient();
     try {
         await sftp.connect({ host, port, username: user, password: pass, readyTimeout: 10000 });
@@ -50,6 +50,16 @@ export async function buildSftpDiff(host: string, port: number, user: string, pa
                         diff.push({ localPath: entryLocalPath, remotePath: entryRemotePath, type, name: entry.name });
                     }
                 }
+                remoteMap.delete(entry.name);
+            }
+
+            if (deleteRemoteFiles) {
+                for (const [name, remoteFile] of remoteMap.entries()) {
+                    if (isCancelled()) throw new Error('Operazione annullata');
+                    if (remoteFile.name === '.' || remoteFile.name === '..') continue;
+                    const entryRemotePath = currentRemotePath.endsWith('/') ? currentRemotePath + name : currentRemotePath + '/' + name;
+                    diff.push({ localPath: '', remotePath: entryRemotePath, type: 'deleted', name });
+                }
             }
         }
         await syncDir(localPath, remoteFolder);
@@ -78,21 +88,31 @@ export async function uploadSftpList(host: string, port: number, user: string, p
         for (const item of diff) {
             if (isCancelled()) throw new Error('Operazione annullata');
             
-            const parentDir = path.posix.dirname(item.remotePath);
-            if (!createdDirs.has(parentDir)) {
-                await sftp.mkdir(parentDir, true);
-                createdDirs.add(parentDir);
-            }
             
-            onProgress(`Upload: ${item.name}`);
-            await sftp.fastPut(item.localPath, item.remotePath);
+            if (item.type === 'deleted') {
+                onProgress(`Delete: ${item.name}`);
+                try {
+                    await sftp.delete(item.remotePath);
+                } catch (e) {
+                    try { await sftp.rmdir(item.remotePath, true); } catch (err) {}
+                }
+            } else {
+                const parentDir = path.posix.dirname(item.remotePath);
+                if (!createdDirs.has(parentDir)) {
+                    await sftp.mkdir(parentDir, true);
+                    createdDirs.add(parentDir);
+                }
+                
+                onProgress(`Upload: ${item.name}`);
+                await sftp.fastPut(item.localPath, item.remotePath);
+            }
         }
     } finally {
         await sftp.end();
     }
 }
 
-export async function buildFtpDiff(host: string, port: number, user: string, pass: string, localPath: string, remoteFolder: string, secure: boolean, isCancelled: () => boolean = () => false): Promise<DiffItem[]> {
+export async function buildFtpDiff(host: string, port: number, user: string, pass: string, localPath: string, remoteFolder: string, secure: boolean, deleteRemoteFiles: boolean, isCancelled: () => boolean = () => false): Promise<DiffItem[]> {
     const attempts: { secure: boolean; label: string }[] = [{ secure, label: secure ? 'FTPS' : 'FTP' }];
     if (secure) attempts.push({ secure: false, label: 'FTP fallback' });
 
@@ -143,6 +163,16 @@ export async function buildFtpDiff(host: string, port: number, user: string, pas
                             diff.push({ localPath: entryLocalPath, remotePath: entryRemotePath, type, name: entry.name });
                         }
                     }
+                    remoteMap.delete(entry.name);
+                }
+
+                if (deleteRemoteFiles) {
+                    for (const [name, remoteFile] of remoteMap.entries()) {
+                        if (isCancelled()) throw new Error('Operazione annullata');
+                        if (remoteFile.name === '.' || remoteFile.name === '..') continue;
+                        const entryRemotePath = currentRemotePath.endsWith('/') ? currentRemotePath + name : currentRemotePath + '/' + name;
+                        diff.push({ localPath: '', remotePath: entryRemotePath, type: 'deleted', name });
+                    }
                 }
             }
             await syncDir(localPath, remoteFolder);
@@ -184,14 +214,24 @@ export async function uploadFtpList(host: string, port: number, user: string, pa
             for (const item of diff) {
                 if (isCancelled()) throw new Error('Operazione annullata');
                 
-                const parentDir = path.posix.dirname(item.remotePath);
-                if (!createdDirs.has(parentDir)) {
-                    await client.ensureDir(parentDir);
-                    createdDirs.add(parentDir);
-                }
                 
-                onProgress(`Upload: ${item.name}`);
-                await client.uploadFrom(item.localPath, item.remotePath);
+                if (item.type === 'deleted') {
+                    onProgress(`Delete: ${item.name}`);
+                    try {
+                        await client.remove(item.remotePath);
+                    } catch (e) {
+                        try { await client.removeDir(item.remotePath); } catch (err) {}
+                    }
+                } else {
+                    const parentDir = path.posix.dirname(item.remotePath);
+                    if (!createdDirs.has(parentDir)) {
+                        await client.ensureDir(parentDir);
+                        createdDirs.add(parentDir);
+                    }
+                    
+                    onProgress(`Upload: ${item.name}`);
+                    await client.uploadFrom(item.localPath, item.remotePath);
+                }
             }
             return;
         } catch (err: any) {

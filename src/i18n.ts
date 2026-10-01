@@ -33,6 +33,7 @@ const translations: Record<string, Record<string, string>> = {
         'tree.sync.desc': 'contiene file da sincronizzare',
         'tree.new': '(Nuovo)',
         'tree.modified': '(Modificato)',
+        'tree.deleted': '(Da eliminare)',
         'tree.notSynced': 'non sincronizzato',
 
         // Messages - Errors
@@ -58,6 +59,7 @@ const translations: Record<string, Record<string, string>> = {
         'msg.info.excluded': '{0} elemento/i escluso/i dall\'upload.',
         'msg.info.included': '{0} elemento/i incluso/i nell\'upload.',
         'msg.info.syncCheck': 'Controllo completato: {0} file da sincronizzare.',
+        'msg.info.syncCheckDelete': 'Controllo completato: {0} file da sincronizzare ({1} da eliminare).',
         'msg.info.testSuccess': '✅ Connessione e trasferimento dati verificati su {0}:{1} via {2}!',
         'msg.info.tlsDisabled': '✅ Secure FTP disabilitato. Il deploy userà FTP senza TLS.',
         'msg.info.isolated': '🌐 Universal FTP Deploy: Progetto isolato con successo in \'{0}\'. Le tue impostazioni FTP sono protette in locale.',
@@ -72,7 +74,8 @@ const translations: Record<string, Record<string, string>> = {
         'dialog.openPreview': 'Apri Anteprima',
         'dialog.yes': 'Sì',
         'dialog.no': 'No',
-        'dialog.confirmUpload': 'Trovati {0} file da caricare ({1} nuovi, {2} modificati). Procedere?',
+        'dialog.confirmUpload': 'Trovati {0} file da sincronizzare ({1} nuovi, {2} modificati). Procedere?',
+        'dialog.confirmUploadDelete': 'Trovati {0} file da sincronizzare ({1} nuovi, {2} modificati, {3} da eliminare). Procedere?',
 
         // QuickPick
         'quickpick.chooseDir': '$(check) Scegli questa cartella: {0}',
@@ -120,6 +123,7 @@ const translations: Record<string, Record<string, string>> = {
         'tree.sync.desc': 'contains files to sync',
         'tree.new': '(New)',
         'tree.modified': '(Modified)',
+        'tree.deleted': '(To be deleted)',
         'tree.notSynced': 'not synced',
 
         // Messages - Errors
@@ -145,6 +149,7 @@ const translations: Record<string, Record<string, string>> = {
         'msg.info.excluded': '{0} item(s) excluded from upload.',
         'msg.info.included': '{0} item(s) included in upload.',
         'msg.info.syncCheck': 'Check complete: {0} files to sync.',
+        'msg.info.syncCheckDelete': 'Check complete: {0} files to sync ({1} to delete).',
         'msg.info.testSuccess': '✅ Connection and data transfer verified on {0}:{1} via {2}!',
         'msg.info.tlsDisabled': '✅ Secure FTP disabled. Deploy will use FTP without TLS.',
         'msg.info.isolated': '🌐 Universal FTP Deploy: Project successfully isolated as \'{0}\'. Your FTP settings are protected locally.',
@@ -159,7 +164,8 @@ const translations: Record<string, Record<string, string>> = {
         'dialog.openPreview': 'Open Preview',
         'dialog.yes': 'Yes',
         'dialog.no': 'No',
-        'dialog.confirmUpload': 'Found {0} files to upload ({1} new, {2} modified). Proceed?',
+        'dialog.confirmUpload': 'Found {0} files to sync ({1} new, {2} modified). Proceed?',
+        'dialog.confirmUploadDelete': 'Found {0} files to sync ({1} new, {2} modified, {3} to delete). Proceed?',
 
         // QuickPick
         'quickpick.chooseDir': '$(check) Choose this folder: {0}',

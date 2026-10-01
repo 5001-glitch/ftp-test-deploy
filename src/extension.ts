@@ -82,6 +82,8 @@ async function checkRemoteSync(treeDataProvider: FtpDeployTreeProvider) {
         }
     }
 
+    const deleteRemoteFiles = config.get<boolean>('deleteRemoteFiles') ?? false;
+
     await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: t('progress.checking', host),
@@ -90,20 +92,30 @@ async function checkRemoteSync(treeDataProvider: FtpDeployTreeProvider) {
         try {
             let diff: DiffItem[] = [];
             if (protocol === 'sftp') {
-                diff = await buildSftpDiff(host, port, username, password, uploadPath, remoteFolder, () => token.isCancellationRequested);
+                diff = await buildSftpDiff(host, port, username, password, uploadPath, remoteFolder, deleteRemoteFiles, () => token.isCancellationRequested);
             } else {
-                diff = await buildFtpDiff(host, port, username, password, uploadPath, remoteFolder, secureFtp, () => token.isCancellationRequested);
+                diff = await buildFtpDiff(host, port, username, password, uploadPath, remoteFolder, secureFtp, deleteRemoteFiles, () => token.isCancellationRequested);
             }
             
-            const syncMap = new Map<string, 'new' | 'modified'>();
+            const syncMap = new Map<string, 'new' | 'modified' | 'deleted'>();
+            let deletedCount = 0;
             for (const item of diff) {
-                const rel = path.relative(uploadPath, item.localPath);
-                const originalLocalPath = path.join(localPath, rel);
-                syncMap.set(originalLocalPath, item.type);
+                if (item.type === 'deleted') {
+                    deletedCount++;
+                    syncMap.set(item.remotePath, 'deleted'); // Store by remote path for deleted
+                } else {
+                    const rel = path.relative(uploadPath, item.localPath);
+                    const originalLocalPath = path.join(localPath, rel);
+                    syncMap.set(originalLocalPath, item.type);
+                }
             }
             
             treeDataProvider.setRemoteSyncState(syncMap);
-            vscode.window.showInformationMessage(t('msg.info.syncCheck', diff.length));
+            if (deleteRemoteFiles && deletedCount > 0) {
+                vscode.window.showInformationMessage(t('msg.info.syncCheckDelete', diff.length, deletedCount));
+            } else {
+                vscode.window.showInformationMessage(t('msg.info.syncCheck', diff.length));
+            }
         } catch (err: any) {
             vscode.window.showErrorMessage(t('msg.err.remoteCheck', err.message));
         }
@@ -747,6 +759,8 @@ async function runDeploy(context: vscode.ExtensionContext, treeDataProvider: Ftp
         }
     }
 
+    const deleteRemoteFiles = config.get<boolean>('deleteRemoteFiles') ?? false;
+
     let diff: DiffItem[] = [];
     const buildSuccess = await vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
@@ -755,9 +769,9 @@ async function runDeploy(context: vscode.ExtensionContext, treeDataProvider: Ftp
     }, async (progress, token) => {
         try {
             if (protocol === 'sftp') {
-                diff = await buildSftpDiff(host, port, username, password, uploadPath, remoteFolder, () => token.isCancellationRequested);
+                diff = await buildSftpDiff(host, port, username, password, uploadPath, remoteFolder, deleteRemoteFiles, () => token.isCancellationRequested);
             } else {
-                diff = await buildFtpDiff(host, port, username, password, uploadPath, remoteFolder, secureFtp, () => token.isCancellationRequested);
+                diff = await buildFtpDiff(host, port, username, password, uploadPath, remoteFolder, secureFtp, deleteRemoteFiles, () => token.isCancellationRequested);
             }
             return true;
         } catch (err: any) {
@@ -786,9 +800,15 @@ async function runDeploy(context: vscode.ExtensionContext, treeDataProvider: Ftp
 
     const newFiles = diff.filter(d => d.type === 'new').length;
     const modifiedFiles = diff.filter(d => d.type === 'modified').length;
+    const deletedFiles = diff.filter(d => d.type === 'deleted').length;
+
+    let confirmMsg = t('dialog.confirmUpload', diff.length, newFiles, modifiedFiles);
+    if (deleteRemoteFiles && deletedFiles > 0) {
+        confirmMsg = t('dialog.confirmUploadDelete', diff.length, newFiles, modifiedFiles, deletedFiles);
+    }
 
     const confirm = await vscode.window.showInformationMessage(
-        t('dialog.confirmUpload', diff.length, newFiles, modifiedFiles),
+        confirmMsg,
         { modal: true },
         t('dialog.yes'), t('dialog.no')
     );
@@ -871,6 +891,7 @@ function copyFolderSync(from: string, to: string, workspaceRoot: string, exclude
                 continue;
             }
             fs.copyFileSync(fromPath, toPath);
+            try { fs.utimesSync(toPath, stat.atime, stat.mtime); } catch (e) {}
         }
     }
 }

@@ -10,7 +10,7 @@
   "icon": "icon.png",
   "displayName": "Universal FTP/SFTP Test Deploy",
   "description": "Deploys build files to any FTP/SFTP server for testing. Fully compatible with Visual Studio Code and Google Antigravity IDE.",
-  "version": "1.3.18",
+  "version": "1.3.20",
   "main": "./dist/extension.js",
   "activationEvents": [
     "*"
@@ -153,6 +153,12 @@
             "default": "en",
             "description": "Language used for the extension's UI and messages (Lingua usata per l'interfaccia e i messaggi dell'estensione).",
             "order": 2
+          },
+          "ftpDeploy.deleteRemoteFiles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Delete files on the remote server that no longer exist locally (Elimina i file sul server remoto che non esistono più localmente).",
+            "order": 3
           }
         }
       },

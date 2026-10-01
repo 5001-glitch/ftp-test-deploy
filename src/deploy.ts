@@ -212,7 +212,7 @@ async function deploySftp(host: string, port: number, user: string, pass: string
     console.log(`[Deploy] Connessione al server SFTP: ${host}:${port}...`);
     console.log(`[Deploy] Controllo file da sincronizzare...`);
     
-    const diff = await buildSftpDiff(host, port, user, pass, localPath, remoteFolder, () => false);
+    const diff = await buildSftpDiff(host, port, user, pass, localPath, remoteFolder, false, () => false);
     
     if (diff.length === 0) {
         console.log(`[Deploy] Tutti i file sono già sincronizzati.`);
@@ -233,7 +233,7 @@ async function deployFtp(host: string, port: number, user: string, pass: string,
     console.log(`[Deploy] Connessione al server FTP: ${host}:${port} (Secure: ${secure})...`);
     console.log(`[Deploy] Controllo file da sincronizzare...`);
     
-    const diff = await buildFtpDiff(host, port, user, pass, localPath, remoteFolder, secure, () => false);
+    const diff = await buildFtpDiff(host, port, user, pass, localPath, remoteFolder, secure, false, () => false);
     
     if (diff.length === 0) {
         console.log(`[Deploy] Tutti i file sono già sincronizzati.`);

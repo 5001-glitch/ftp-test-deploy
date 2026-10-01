@@ -8,7 +8,7 @@ export class FtpDeployTreeProvider implements vscode.TreeDataProvider<DeployItem
     private _onDidChangeTreeData: vscode.EventEmitter<DeployItem | undefined | void> = new vscode.EventEmitter<DeployItem | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<DeployItem | undefined | void> = this._onDidChangeTreeData.event;
 
-    private remoteSyncState: Map<string, 'new' | 'modified'> | null = null;
+    private remoteSyncState: Map<string, 'new' | 'modified' | 'deleted'> | null = null;
 
     constructor(
         private workspaceRoot: string | undefined,
@@ -16,7 +16,7 @@ export class FtpDeployTreeProvider implements vscode.TreeDataProvider<DeployItem
         private getExcludedFiles: () => string[]
     ) {}
 
-    setRemoteSyncState(state: Map<string, 'new' | 'modified'> | null): void {
+    setRemoteSyncState(state: Map<string, 'new' | 'modified' | 'deleted'> | null): void {
         this.remoteSyncState = state;
         this.refresh();
     }
@@ -289,6 +289,42 @@ export class FtpDeployTreeProvider implements vscode.TreeDataProvider<DeployItem
                 }
             }
         }
+        
+        // Add deleted files that belong to this dirPath
+        if (this.remoteSyncState) {
+            for (const [remoteFilePath, state] of this.remoteSyncState.entries()) {
+                if (state === 'deleted') {
+                    // For deleted files, the key in the map is actually the remote path
+                    // Let's just show them at the root level for simplicity, or we can parse the path.
+                    // Wait, in extension.ts we stored item.remotePath as the key.
+                    // If dirPath is the root buildFolder, we can show them there.
+                    const isRootBuildFolder = this.workspaceRoot && (
+                        dirPath === path.join(this.workspaceRoot, 'out') ||
+                        dirPath === path.join(this.workspaceRoot, 'dist') ||
+                        dirPath === path.join(this.workspaceRoot, 'build') ||
+                        dirPath === path.join(this.workspaceRoot, 'public') ||
+                        dirPath === this.workspaceRoot
+                    );
+                    
+                    // A simple approximation: if we are at the root build folder, we show all deleted files here
+                    // To be more precise, we could check if path.dirname(remoteFilePath) matches the relative dirPath.
+                    // But since we just want to signal them, let's append them at the root.
+                    const isRoot = path.relative(this.workspaceRoot || '', dirPath) === '.' || isRootBuildFolder;
+                    if (isRoot) {
+                        const item = new DeployItem(
+                            `❌ ${path.basename(remoteFilePath)}`,
+                            vscode.TreeItemCollapsibleState.None,
+                            remoteFilePath
+                        );
+                        item.contextValue = 'deletedItem';
+                        item.tooltip = t('tree.file');
+                        item.description = t('tree.deleted');
+                        items.push(item);
+                    }
+                }
+            }
+        }
+        
         return items;
     }
 
